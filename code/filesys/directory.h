@@ -69,6 +69,9 @@ public:
     bool Add(char *name, int newSector); // Add a file name into the directory
     bool Add(char *name, int newSector, bool isDirectory);
 
+    DirectoryEntry* Get(int index) { if (index >= tableSize) return NULL; return table + index;}
+    int Size() { return tableSize; }
+
     bool Remove(char *name); // Remove a file from the directory
 
     void List();  // Print the names of all the files

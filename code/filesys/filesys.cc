@@ -182,8 +182,7 @@ Path FileSystem::DescribePath(char *path) {
                 dir[count++] = '/';
             }
             dir[count] = '\0';
-            obj.name[0] = '/';
-            count = 1;
+            count = 0;
         } else if (i < dirEnd) {
             dir[count++] = path[i];
         } else {
@@ -436,7 +435,7 @@ bool FileSystem::Remove(char *name)
     int sector;
 
     Path path = DescribePath(name);
-    ASSERT(path.dirSector >= 0);
+    if (path.dirSector == -1) return FALSE;
 
     OpenFile *dirFile = path.dirSector == DirectorySector ? directoryFile : new OpenFile(path.dirSector);
 
@@ -467,6 +466,70 @@ bool FileSystem::Remove(char *name)
     return TRUE;
 }
 
+bool FileSystem::RemoveDirectory(char *name) {
+    if (strcmp(name, "/") == 0) return FALSE;
+    
+    OpenFile *dirFile;
+    Directory *directory;
+    PersistentBitmap *freeMap;
+
+    Path path = DescribePath(name); // dir sector = parent directory of this dir
+    if (path.dirSector == -1) return FALSE;
+
+    DEBUG(dbgFile, "Delete directory " << path.name << " which is in dir sector #" << path.dirSector);
+
+    dirFile = path.dirSector == DirectorySector ? directoryFile : new OpenFile(path.dirSector);
+    directory = new Directory(NumDirEntries);
+    directory->FetchFrom(dirFile);
+    freeMap = new PersistentBitmap(freeMapFile, NumSectors);
+    
+    bool bl = TRUE;//RemoveDirectory(freeMap, 1);
+
+    if (!directory->Remove(path.name)) {
+        DEBUG(dbgFile, "Failed to delete directory");
+    }
+    freeMap->WriteBack(freeMapFile);
+    directory->WriteBack(dirFile);
+
+    if (path.dirSector != DirectorySector) delete dirFile;
+    delete freeMap;
+    delete directory;
+    return bl;
+}
+
+bool FileSystem::RemoveDirectory(PersistentBitmap *freeMap, int dirSector) {
+    Directory *directory = new Directory(NumDirEntries);
+    OpenFile *dirFile = dirSector == DirectorySector ? directoryFile : new OpenFile(dirSector);
+    FileHeader *fileHdr = new FileHeader;
+
+    directory->FetchFrom(dirFile);
+    bool bl = TRUE;
+    
+    for (int i = 0; i < directory->Size(); i++) {
+        DirectoryEntry *item = directory->Get(i);
+        if (item == NULL || !item->inUse) {
+            continue;
+        }    
+        directory->Remove(item->name);
+    
+        if (item->isSubdir) {
+            bl = bl && RemoveDirectory(freeMap, item->sector);
+        } else {
+            fileHdr->FetchFrom(item->sector);
+            fileHdr->Deallocate(freeMap);
+            freeMap->Clear(item->sector);
+        }
+    }
+
+    fileHdr->FetchFrom(dirSector);
+    fileHdr->Deallocate(freeMap);
+    freeMap->Clear(dirSector);
+    if (dirSector != DirectorySector) delete dirFile;
+    delete fileHdr;
+    delete directory;
+    return bl;
+}
+
 //----------------------------------------------------------------------
 // FileSystem::List
 // 	List all the files in the file system directory.
@@ -476,21 +539,25 @@ void FileSystem::List(char *name)
 {
     Directory *directory = new Directory(NumDirEntries);
     int dirSector = TraverseDirectory(name);
-    OpenFile *file = dirSector == DirectorySector ? directoryFile : new OpenFile(dirSector);
+    OpenFile *dirFile = dirSector == DirectorySector ? directoryFile : new OpenFile(dirSector);
 
-    directory->FetchFrom(file);
+    directory->FetchFrom(dirFile);
     directory->List();
-    if (dirSector != DirectorySector) delete directory;
+
+    delete directory;
+    if (dirSector != DirectorySector) delete dirFile;
 }
 
 void FileSystem::ListRecursively(char *name) {
     Directory *directory = new Directory(NumDirEntries);
     int dirSector = TraverseDirectory(name);
-    OpenFile *file = dirSector == DirectorySector ? directoryFile : new OpenFile(dirSector);
+    OpenFile *dirFile = dirSector == DirectorySector ? directoryFile : new OpenFile(dirSector);
 
-    directory->FetchFrom(file);
+    directory->FetchFrom(dirFile);
     directory->ListRecursively(0);
-    if (dirSector != DirectorySector) delete directory;
+
+    delete directory;
+    if (dirSector != DirectorySector) delete dirFile;
 }
 
 //----------------------------------------------------------------------

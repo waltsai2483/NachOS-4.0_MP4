@@ -113,6 +113,10 @@ public:
 
 	bool Remove(char *name); // Delete a file (UNIX unlink)
 
+	bool RemoveDirectory(char *name);
+
+	bool RemoveDirectory(PersistentBitmap *freeMap, int dirSector);
+
 	void List(char *name); // List all the files in the file system
 
 	void ListRecursively(char *name); // List all the files and all files under the subdirectories

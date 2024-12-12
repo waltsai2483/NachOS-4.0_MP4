@@ -202,7 +202,7 @@ void Directory::ListRecursively(int depth) {
                 delete file;
                 delete directory;
             } else {
-                printf("%s[F] %s\n", tab, table[i].name + sizeof(char));
+                printf("%s[F] %s\n", tab, table[i].name);
             }
         }
     }
