@@ -435,11 +435,17 @@ bool FileSystem::Remove(char *name)
     FileHeader *fileHdr;
     int sector;
 
+    Path path = DescribePath(name);
+    ASSERT(path.dirSector >= 0);
+
+    OpenFile *dirFile = path.dirSector == DirectorySector ? directoryFile : new OpenFile(path.dirSector);
+
     directory = new Directory(NumDirEntries);
-    directory->FetchFrom(directoryFile);
-    sector = directory->Find(name);
+    directory->FetchFrom(dirFile);
+    sector = directory->Find(path.name);
     if (sector == -1)
     {
+        if (path.dirSector != DirectorySector) delete dirFile;
         delete directory;
         return FALSE; // file not found
     }
@@ -450,11 +456,12 @@ bool FileSystem::Remove(char *name)
 
     fileHdr->Deallocate(freeMap); // remove data blocks
     freeMap->Clear(sector);       // remove header block
-    directory->Remove(name);
+    directory->Remove(path.name);
 
     freeMap->WriteBack(freeMapFile);     // flush to disk
-    directory->WriteBack(directoryFile); // flush to disk
+    directory->WriteBack(dirFile); // flush to disk
     delete fileHdr;
+    if (path.dirSector != DirectorySector) delete dirFile;
     delete directory;
     delete freeMap;
     return TRUE;
