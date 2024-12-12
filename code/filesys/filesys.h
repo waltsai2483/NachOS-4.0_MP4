@@ -113,9 +113,9 @@ public:
 
 	bool Remove(char *name); // Delete a file (UNIX unlink)
 
-	void List(); // List all the files in the file system
+	void List(char *name); // List all the files in the file system
 
-	void ListRecursively(); // List all the files and all files under the subdirectories
+	void ListRecursively(char *name); // List all the files and all files under the subdirectories
 
 	void Print(); // List all the files and their contents
 

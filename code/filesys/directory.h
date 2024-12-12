@@ -20,9 +20,9 @@
 
 #include "openfile.h"
 
-#define FileNameMaxLen 64 // for simplicity, we assume \
+#define FileNameMaxLen 9 // for simplicity, we assume
                          // file names are <= 9 characters long
-#define NumDirEntries 10
+#define NumDirEntries 64
 
 // The following class defines a "directory entry", representing a file
 // in the directory.  Each entry gives the name of the file, and where
@@ -73,7 +73,7 @@ public:
 
     void List();  // Print the names of all the files
                   //  in the directory
-    void ListRecursively(PersistentBitmap *freeMap, int depth);
+    void ListRecursively(int depth);
     void Print(); // Verbose print of the contents
                   //  of the directory -- all the file
                   //  names and their contents.

@@ -59,7 +59,8 @@ void LinkedDataSector::Debug()  {
 
 bool SeqDataSectors::Allocate(PersistentBitmap *freeMap, int fileSize) {
 	int numSectors = divRoundUp(fileSize, SectorSize);
-	if (freeMap->NumClear() < numSectors) {
+	int metadataSectors = divRoundUp(numSectors, LinkedDirect);
+	if (freeMap->NumClear() < numSectors + metadataSectors) {
 		cerr << "Not enough space!\n";
 		return FALSE; // not enough space
 	}
@@ -171,8 +172,7 @@ FileHeader::~FileHeader()
 bool FileHeader::Allocate(PersistentBitmap *freeMap, int fileSize)
 {
 	numBytes = fileSize;
-	dataSectorList.Allocate(freeMap, fileSize);
-	return TRUE;
+	return dataSectorList.Allocate(freeMap, fileSize);
 }
 
 //----------------------------------------------------------------------

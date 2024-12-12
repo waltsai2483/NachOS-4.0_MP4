@@ -184,7 +184,7 @@ void Directory::List()
             printf("%s\n", table[i].name);
 }
 
-void Directory::ListRecursively(PersistentBitmap *freeMap, int depth) {
+void Directory::ListRecursively(int depth) {
     char *tab = new char[depth+1];
     memset(tab, '\t', depth * sizeof(char));
     tab[depth] = '\0';
@@ -198,7 +198,7 @@ void Directory::ListRecursively(PersistentBitmap *freeMap, int depth) {
                 printf("%s[D] %s\n", tab, table[i].name);
 
                 directory->FetchFrom(file);
-                directory->ListRecursively(freeMap, depth + 1);
+                directory->ListRecursively(depth + 1);
                 delete file;
                 delete directory;
             } else {

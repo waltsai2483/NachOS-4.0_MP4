@@ -283,6 +283,9 @@ bool FileSystem::Create(char *name, int initialSize)
 // It will go thru every directory of the path, create one if it's not found.
 int FileSystem::TraverseDirectory(char *path)
 {
+    if (strcmp(path, "/") == 0) {
+        return DirectorySector;
+    }
     char dirname[FileNameMaxLen + 1];
     memset(dirname, '\0', FileNameMaxLen * sizeof(char));
 
@@ -299,13 +302,13 @@ int FileSystem::TraverseDirectory(char *path)
 
     while (true) {
         if (path[curr] == '/' || path[curr] == '\0') {
-            if (dirname[0] == '\0' && path[curr] == '\0') { // Root directory
+            /*if (dirname[0] == '\0' && path[curr] == '\0') { // Root directory
                 DEBUG(dbgFile, "The directory /" << dirname << " is root directory, which is in sector #" << subdirSector);
                 delete freeMap;
                 delete currDir; // Note that do not delete the currDirFile
                                 // Because in root dir, the curr dir is directoryFile in fileSystem
                 return DirectorySector;
-            }
+            }*/
             DEBUG(dbgFile, "Create directory /" << dirname);
 
             currDir->FetchFrom(currDirFile);
@@ -324,7 +327,6 @@ int FileSystem::TraverseDirectory(char *path)
 
                 dirHdr->WriteBack(subdirSector);
                 currDir->WriteBack(currDirFile);
-                freeMap->WriteBack(freeMapFile);
                 DEBUG(dbgFile, "Create directory /" << dirname << " with data stored in sector #" << subdirSector);
                 
                 delete dirHdr;
@@ -347,6 +349,7 @@ int FileSystem::TraverseDirectory(char *path)
         if (path[curr] == '\0') break;
         curr++;
     }
+    freeMap->WriteBack(freeMapFile);
 
     delete currDir;
     delete currDirFile;
@@ -371,19 +374,20 @@ OpenFile * FileSystem::Open(char *name)
     Path path = DescribePath(name);
     ASSERT(path.dirSector >= 0);
 
-    dirFile = new OpenFile(path.dirSector);
+    dirFile = path.dirSector == DirectorySector ? directoryFile : new OpenFile(path.dirSector);
     directory->FetchFrom(dirFile);
 
+    OpenFile *openFile = NULL;
     int fileSector = directory->Find(path.name);
+    
     if (fileSector == -1) {
         DEBUG(dbgFile, "File " << name << " does not exist!");
-        return NULL;
+    } else {
+        DEBUG(dbgFile, "Opening file " << path.name << " in sector #" << fileSector);
+        openFile = new OpenFile(fileSector);
     }
-
-    DEBUG(dbgFile, "Opening file " << path.name << " in sector #" << fileSector);
-    OpenFile *openFile = new OpenFile(fileSector); // name was found in directory
     delete directory;
-    delete dirFile;
+    if (path.dirSector != DirectorySector) delete dirFile;
     return openFile; // return NULL if not found
 }
 
@@ -461,22 +465,25 @@ bool FileSystem::Remove(char *name)
 // 	List all the files in the file system directory.
 //----------------------------------------------------------------------
 
-void FileSystem::List()
+void FileSystem::List(char *name)
 {
     Directory *directory = new Directory(NumDirEntries);
+    int dirSector = TraverseDirectory(name);
+    OpenFile *file = dirSector == DirectorySector ? directoryFile : new OpenFile(dirSector);
 
-    directory->FetchFrom(directoryFile);
+    directory->FetchFrom(file);
     directory->List();
-    delete directory;
+    if (dirSector != DirectorySector) delete directory;
 }
 
-void FileSystem::ListRecursively() {
-    PersistentBitmap *freeMap = new PersistentBitmap(freeMapFile, NumSectors);
+void FileSystem::ListRecursively(char *name) {
     Directory *directory = new Directory(NumDirEntries);
+    int dirSector = TraverseDirectory(name);
+    OpenFile *file = dirSector == DirectorySector ? directoryFile : new OpenFile(dirSector);
 
-    directory->FetchFrom(directoryFile);
-    directory->ListRecursively(freeMap, 0);
-    delete directory;
+    directory->FetchFrom(file);
+    directory->ListRecursively(0);
+    if (dirSector != DirectorySector) delete directory;
 }
 
 //----------------------------------------------------------------------
