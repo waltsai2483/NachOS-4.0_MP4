@@ -313,6 +313,7 @@ int FileSystem::TraverseDirectory(char *path)
             currDir->FetchFrom(currDirFile);
             subdirSector = currDir->Find(dirname);
 
+
             // Subdir not found or corrupted (if invalid), must create one.
             if (subdirSector == -1) { 
                 subdirSector = freeMap->FindAndSet(); // Find a sector to store dir header
@@ -329,10 +330,12 @@ int FileSystem::TraverseDirectory(char *path)
                 DEBUG(dbgFile, "Create directory /" << dirname << " with data stored in sector #" << subdirSector);
                 
                 delete dirHdr;
+                if (currDirFile != directoryFile) delete currDirFile;
 
                 currDirFile = new OpenFile(subdirSector); // Overwrite the subdir sector as an empty directory
                 emptyDir.WriteBack(currDirFile);
             } else {
+                if (currDirFile != directoryFile) delete currDirFile;
                 currDirFile = new OpenFile(subdirSector);
                 DEBUG(dbgFile, "Successfully find directory /" << dirname << " with data stored in sector #" << subdirSector);
             }
