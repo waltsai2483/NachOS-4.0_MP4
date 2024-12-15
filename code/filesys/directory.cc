@@ -185,9 +185,9 @@ void Directory::List()
 }
 
 void Directory::ListRecursively(int depth) {
-    char *tab = new char[depth+1];
+    char *tab = new char[4*depth+1];
     memset(tab, ' ', 4 * depth * sizeof(char));
-    tab[depth] = '\0';
+    tab[4*depth] = '\0';
 
     for (int i = 0; i < tableSize; i++) {
         if (table[i].inUse) {
