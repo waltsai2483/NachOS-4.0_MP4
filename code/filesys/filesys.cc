@@ -483,10 +483,10 @@ bool FileSystem::RemoveDirectory(char *name) {
 
     dirFile = path.dirSector == DirectorySector ? directoryFile : new OpenFile(path.dirSector);
     directory = new Directory(NumDirEntries);
-    directory->FetchFrom(dirFile);
+    directory->FetchFrom(dirFile); // parent of the directory
     freeMap = new PersistentBitmap(freeMapFile, NumSectors);
     
-    bool bl = TRUE;//RemoveDirectory(freeMap, 1);
+    bool bl = ClearDirectoryContent(freeMap, directory->Find(path.name));
 
     if (!directory->Remove(path.name)) {
         DEBUG(dbgFile, "Failed to delete directory");
@@ -500,7 +500,7 @@ bool FileSystem::RemoveDirectory(char *name) {
     return bl;
 }
 
-bool FileSystem::RemoveDirectory(PersistentBitmap *freeMap, int dirSector) {
+bool FileSystem::ClearDirectoryContent(PersistentBitmap *freeMap, int dirSector) {
     Directory *directory = new Directory(NumDirEntries);
     OpenFile *dirFile = dirSector == DirectorySector ? directoryFile : new OpenFile(dirSector);
     FileHeader *fileHdr = new FileHeader;
@@ -514,13 +514,16 @@ bool FileSystem::RemoveDirectory(PersistentBitmap *freeMap, int dirSector) {
             continue;
         }    
         directory->Remove(item->name);
+        DEBUG(dbgFile, "Remove file /" << item->name << " under the subdirectory.");
     
         if (item->isSubdir) {
-            bl = bl && RemoveDirectory(freeMap, item->sector);
+            DEBUG(dbgFile, "/" << item->name << " is a directory, therefore recursively call FileSystem::ClearDirectoryContent.");
+            bl = bl && ClearDirectoryContent(freeMap, item->sector);
         } else {
             fileHdr->FetchFrom(item->sector);
             fileHdr->Deallocate(freeMap);
             freeMap->Clear(item->sector);
+            DEBUG(dbgFile, "Free file /" << item->name << " used sectors.");
         }
     }
 

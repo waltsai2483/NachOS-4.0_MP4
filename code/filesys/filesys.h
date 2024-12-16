@@ -115,7 +115,7 @@ public:
 
 	bool RemoveDirectory(char *name);
 
-	bool RemoveDirectory(PersistentBitmap *freeMap, int dirSector);
+	bool ClearDirectoryContent(PersistentBitmap *freeMap, int dirSector);
 
 	void List(char *name); // List all the files in the file system
 
